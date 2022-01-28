@@ -1,40 +1,40 @@
-const http = require("http");
+const { parse } = require("csv-parse");
+const fs = require("fs");
 
-const PORT = 3000;
+const results = [];
+const habitablePlanets = [];
 
-const server = http.createServer((req, res) => {
-  if (req.url === "/friends") {
-    res.writeHead(200, {
-      "Content-Type": "application/json",
-    });
-    res.end(
-      JSON.stringify({
-        id: 1,
-        name: "pasindu",
-        message: "hello !",
+function isHabitablePlanet(planet) {
+  return (
+    planet["koi_disposition"] === "CONFIRMED" &&
+    planet["koi_insol"] > 0.36 &&
+    planet["koi_insol"] < 1.11 &&
+    planet["koi_prad"] < 1.6
+  );
+}
+
+fs.createReadStream("kepler_data.csv")
+  .pipe(
+    parse({
+      comment: "#",
+      columns: true,
+    })
+  )
+  .on("data", (data) => {
+    if (isHabitablePlanet(data)) {
+      habitablePlanets.push(data);
+    }
+    results.push(data);
+  })
+  .on("error", (err) => {
+    console.log(err);
+  })
+  .on("end", () => {
+    console.log(`found ${habitablePlanets.length} habitable planets`);
+    console.log(
+      habitablePlanets.map((planet) => {
+        return planet["kepler_name"];
       })
     );
-  }
-
-  if (req.url === "/messages") {
-    res.setHeader("Content-Type", "text/html");
-    res.write("<html>");
-    res.write("<body>");
-    res.write("<ul>");
-    res.write("<li>Hi Pasindu</li>");
-    res.write("<li>How are you ? </li>");
-    res.write("</ul>");
-    res.write("</body>");
-    res.write("</html>");
-    res.end();
-  } else {
-    res.statusCode = 404;
-    res.end();
-  }
-});
-
-//127.0.0.1=>localhost
-
-server.listen(PORT, () => {
-  console.log(`listening on port : ${PORT} ....`);
-});
+    console.log("done");
+  });
